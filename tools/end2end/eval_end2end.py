@@ -121,9 +121,7 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
             for index_dt, dt in enumerate(dts):
                 dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
                 dt_poly = polygon_from_str(dt_coors)
-                iou = polygon_iou(dt_poly, gt_poly)
-                if iou >= iou_thresh:
-                    all_ious[(index_gt, index_dt)] = iou
+                calculate_iou(dt_poly, gt_poly, iou_thresh, all_ious, index_gt, index_dt)
         sorted_ious = sorted(
             all_ious.items(), key=operator.itemgetter(1), reverse=True)
         sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
@@ -180,6 +178,11 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     print('precision: %.2f' % (precision * 100) + "%")
     print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def calculate_iou(dt_poly, gt_poly, iou_thresh, all_ious, index_gt, index_dt):
+    iou = polygon_iou(dt_poly, gt_poly)
+    if iou >= iou_thresh:
+        all_ious[(index_gt, index_dt)] = iou
 
 
 if __name__ == '__main__':
