@@ -153,13 +153,7 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
         ed_sum, dt_count = calculate_unmatched_dt(dts, dt_match, ed_sum, dt_count)
 
         # unmatched gt
-        for tindex, gt_match_flag in enumerate(gt_match):
-            if gt_match_flag == False and ignore_masks[tindex] == '0':
-                dt_str = ''
-                gt_str = gts[tindex][8]
-                ed_sum += ed(gt_str, dt_str)
-                num_gt_chars += len(gt_str)
-                gt_count += 1
+        ed_sum, num_gt_chars, gt_count = calculate_unmatched_gt(gts, gt_match, ignore_masks, ed_sum, num_gt_chars, gt_count)
 
     eps = 1e-9
     print('hit, dt_count, gt_count', hit, dt_count, gt_count)
@@ -221,3 +215,13 @@ if __name__ == '__main__':
             ed_sum += ed(dt_str, gt_str)
             dt_count += 1
     return ed_sum, dt_count
+    
+    def calculate_unmatched_gt(gts: List[str], gt_match: List[bool], ignore_masks: List[str], ed_sum: int, num_gt_chars: int, gt_count: int) -> Tuple[int, int, int]:
+        for tindex, gt_match_flag in enumerate(gt_match):
+            if gt_match_flag == False and ignore_masks[tindex] == '0':
+                dt_str = ''
+                gt_str = gts[tindex][8]
+                ed_sum += ed(gt_str, dt_str)
+                num_gt_chars += len(gt_str)
+                gt_count += 1
+        return ed_sum, num_gt_chars, gt_count
