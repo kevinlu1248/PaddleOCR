@@ -69,8 +69,13 @@ def calculate_iou():
 polygon_iou = calculate_iou()
 
 
-def ed(str1, str2):
-    return editdistance.eval(str1, str2)
+
+def calculate_edit_distance():
+    def ed(str1, str2):
+        return editdistance.eval(str1, str2)
+    return ed
+
+ed = calculate_edit_distance()
 
 
 def e2e_eval(gt_dir, res_dir, ignore_blank=False):
