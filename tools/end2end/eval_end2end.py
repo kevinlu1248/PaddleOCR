@@ -44,28 +44,38 @@ def polygon_from_str(polygon_points):
     return polygon
 
 
-def polygon_iou(poly1, poly2):
-    """
-    Intersection over union between two shapely polygons.
-    """
-    if not poly1.intersects(
-            poly2):  # this test is fast and can accelerate calculation
-        iou = 0
-    else:
-        try:
-            inter_area = poly1.intersection(poly2).area
-            union_area = poly1.area + poly2.area - inter_area
-            iou = float(inter_area) / union_area
-        except shapely.geos.TopologicalError:
-            # except Exception as e:
-            #     print(e)
-            print('shapely.geos.TopologicalError occurred, iou set to 0')
+
+def calculate_iou():
+    def polygon_iou(poly1, poly2):
+        """
+        Intersection over union between two shapely polygons.
+        """
+        if not poly1.intersects(
+                poly2):  # this test is fast and can accelerate calculation
             iou = 0
-    return iou
+        else:
+            try:
+                inter_area = poly1.intersection(poly2).area
+                union_area = poly1.area + poly2.area - inter_area
+                iou = float(inter_area) / union_area
+            except shapely.geos.TopologicalError:
+                # except Exception as e:
+                #     print(e)
+                print('shapely.geos.TopologicalError occurred, iou set to 0')
+                iou = 0
+        return iou
+    return polygon_iou
+
+polygon_iou = calculate_iou()
 
 
-def ed(str1, str2):
-    return editdistance.eval(str1, str2)
+
+def calculate_edit_distance():
+    def ed(str1, str2):
+        return editdistance.eval(str1, str2)
+    return ed
+
+ed = calculate_edit_distance()
 
 
 def e2e_eval(gt_dir, res_dir, ignore_blank=False):
@@ -79,38 +89,7 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     ed_sum = 0
 
     for i, val_name in enumerate(val_names):
-        with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
-            gt_lines = [o.strip() for o in f.readlines()]
-        gts = []
-        ignore_masks = []
-        for line in gt_lines:
-            parts = line.strip().split('\t')
-            # ignore illegal data
-            if len(parts) < 9:
-                continue
-            assert (len(parts) < 11)
-            if len(parts) == 9:
-                gts.append(parts[:8] + [''])
-            else:
-                gts.append(parts[:8] + [parts[-1]])
-
-            ignore_masks.append(parts[8])
-
-        val_path = os.path.join(res_dir, val_name)
-        if not os.path.exists(val_path):
-            dt_lines = []
-        else:
-            with open(val_path, encoding='utf-8') as f:
-                dt_lines = [o.strip() for o in f.readlines()]
-        dts = []
-        for line in dt_lines:
-            # print(line)
-            parts = line.strip().split("\t")
-            assert (len(parts) < 10), "line error: {}".format(line)
-            if len(parts) == 8:
-                dts.append(parts + [''])
-            else:
-                dts.append(parts)
+        dts, gts, ignore_masks = read_files(gt_dir, val_name, res_dir)
 
         dt_match = [False] * len(dts)
         gt_match = [False] * len(gts)
@@ -180,6 +159,41 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     print('precision: %.2f' % (precision * 100) + "%")
     print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def read_files(gt_dir, val_name, res_dir):
+    with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
+        gt_lines = [o.strip() for o in f.readlines()]
+    gts = []
+    ignore_masks = []
+    for line in gt_lines:
+        parts = line.strip().split('\t')
+        # ignore illegal data
+        if len(parts) < 9:
+            continue
+        assert (len(parts) < 11)
+        if len(parts) == 9:
+            gts.append(parts[:8] + [''])
+        else:
+            gts.append(parts[:8] + [parts[-1]])
+
+        ignore_masks.append(parts[8])
+
+    val_path = os.path.join(res_dir, val_name)
+    if not os.path.exists(val_path):
+        dt_lines = []
+    else:
+        with open(val_path, encoding='utf-8') as f:
+            dt_lines = [o.strip() for o in f.readlines()]
+    dts = []
+    for line in dt_lines:
+        # print(line)
+        parts = line.strip().split("\t")
+        assert (len(parts) < 10), "line error: {}".format(line)
+        if len(parts) == 8:
+            dts.append(parts + [''])
+        else:
+            dts.append(parts)
+    return dts, gts, ignore_masks
 
 
 if __name__ == '__main__':
