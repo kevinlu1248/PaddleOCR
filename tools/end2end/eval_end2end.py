@@ -91,59 +91,11 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     for i, val_name in enumerate(val_names):
         dts, gts, ignore_masks = read_files(gt_dir, val_name, res_dir)
 
-        dt_match = [False] * len(dts)
-        gt_match = [False] * len(gts)
-        all_ious = defaultdict(tuple)
-        for index_gt, gt in enumerate(gts):
-            gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
-            gt_poly = polygon_from_str(gt_coors)
-            for index_dt, dt in enumerate(dts):
-                dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
-                dt_poly = polygon_from_str(dt_coors)
-                iou = polygon_iou(dt_poly, gt_poly)
-                if iou >= iou_thresh:
-                    all_ious[(index_gt, index_dt)] = iou
-        sorted_ious = sorted(
-            all_ious.items(), key=operator.itemgetter(1), reverse=True)
-        sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+        hit, dt_count, gt_count, ed_sum, num_gt_chars = match_gt_and_pred(dts, gts, iou_thresh, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count)
 
-        # matched gt and dt
-        for gt_dt_pair in sorted_gt_dt_pairs:
-            index_gt, index_dt = gt_dt_pair
-            if gt_match[index_gt] == False and dt_match[index_dt] == False:
-                gt_match[index_gt] = True
-                dt_match[index_dt] = True
-                if ignore_blank:
-                    gt_str = strQ2B(gts[index_gt][8]).replace(" ", "")
-                    dt_str = strQ2B(dts[index_dt][8]).replace(" ", "")
-                else:
-                    gt_str = strQ2B(gts[index_gt][8])
-                    dt_str = strQ2B(dts[index_dt][8])
-                if ignore_masks[index_gt] == '0':
-                    ed_sum += ed(gt_str, dt_str)
-                    num_gt_chars += len(gt_str)
-                    if gt_str == dt_str:
-                        hit += 1
-                    gt_count += 1
-                    dt_count += 1
+    calculate_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
 
-        # unmatched dt
-        for tindex, dt_match_flag in enumerate(dt_match):
-            if dt_match_flag == False:
-                dt_str = dts[tindex][8]
-                gt_str = ''
-                ed_sum += ed(dt_str, gt_str)
-                dt_count += 1
-
-        # unmatched gt
-        for tindex, gt_match_flag in enumerate(gt_match):
-            if gt_match_flag == False and ignore_masks[tindex] == '0':
-                dt_str = ''
-                gt_str = gts[tindex][8]
-                ed_sum += ed(gt_str, dt_str)
-                num_gt_chars += len(gt_str)
-                gt_count += 1
-
+def calculate_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars):
     eps = 1e-9
     print('hit, dt_count, gt_count', hit, dt_count, gt_count)
     precision = hit / (dt_count + eps)
@@ -159,6 +111,61 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     print('precision: %.2f' % (precision * 100) + "%")
     print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def match_gt_and_pred(dts, gts, iou_thresh, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count):
+    dt_match = [False] * len(dts)
+    gt_match = [False] * len(gts)
+    all_ious = defaultdict(tuple)
+    for index_gt, gt in enumerate(gts):
+        gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
+        gt_poly = polygon_from_str(gt_coors)
+        for index_dt, dt in enumerate(dts):
+            dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
+            dt_poly = polygon_from_str(dt_coors)
+            iou = polygon_iou(dt_poly, gt_poly)
+            if iou >= iou_thresh:
+                all_ious[(index_gt, index_dt)] = iou
+    sorted_ious = sorted(
+        all_ious.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+
+    # matched gt and dt
+    for gt_dt_pair in sorted_gt_dt_pairs:
+        index_gt, index_dt = gt_dt_pair
+        if gt_match[index_gt] == False and dt_match[index_dt] == False:
+            gt_match[index_gt] = True
+            dt_match[index_dt] = True
+            if ignore_blank:
+                gt_str = strQ2B(gts[index_gt][8]).replace(" ", "")
+                dt_str = strQ2B(dts[index_dt][8]).replace(" ", "")
+            else:
+                gt_str = strQ2B(gts[index_gt][8])
+                dt_str = strQ2B(dts[index_dt][8])
+            if ignore_masks[index_gt] == '0':
+                ed_sum += ed(gt_str, dt_str)
+                num_gt_chars += len(gt_str)
+                if gt_str == dt_str:
+                    hit += 1
+                gt_count += 1
+                dt_count += 1
+
+    # unmatched dt
+    for tindex, dt_match_flag in enumerate(dt_match):
+        if dt_match_flag == False:
+            dt_str = dts[tindex][8]
+            gt_str = ''
+            ed_sum += ed(dt_str, gt_str)
+            dt_count += 1
+
+    # unmatched gt
+    for tindex, gt_match_flag in enumerate(gt_match):
+        if gt_match_flag == False and ignore_masks[tindex] == '0':
+            dt_str = ''
+            gt_str = gts[tindex][8]
+            ed_sum += ed(gt_str, dt_str)
+            num_gt_chars += len(gt_str)
+            gt_count += 1
+    return hit, dt_count, gt_count, ed_sum, num_gt_chars
 
 def read_files(gt_dir, val_name, res_dir):
     with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
