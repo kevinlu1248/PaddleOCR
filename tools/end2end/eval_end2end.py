@@ -223,6 +223,15 @@ if __name__ == '__main__':
     pred_folder = sys.argv[2]
     e2e_eval(gt_folder, pred_folder)
 def calculate_unmatched_dt(dt_match, dts, ed_sum, dt_count):
+def calculate_unmatched_gt(gt_match, gts, ignore_masks, ed_sum, num_gt_chars, gt_count):
+    for tindex, gt_match_flag in enumerate(gt_match):
+        if gt_match_flag == False and ignore_masks[tindex] == '0':
+            dt_str = ''
+            gt_str = gts[tindex][8]
+            ed_sum += ed(gt_str, dt_str)
+            num_gt_chars += len(gt_str)
+            gt_count += 1
+    return ed_sum, num_gt_chars, gt_count
     for tindex, dt_match_flag in enumerate(dt_match):
         if dt_match_flag == False:
             dt_str = dts[tindex][8]
