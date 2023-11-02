@@ -21,6 +21,7 @@ import numpy as np
 from collections import defaultdict
 import operator
 import editdistance
+from typing import List, Tuple
 
 
 def strQ2B(ustring):
@@ -191,3 +192,28 @@ if __name__ == '__main__':
     gt_folder = sys.argv[1]
     pred_folder = sys.argv[2]
     e2e_eval(gt_folder, pred_folder)
+    
+    def match_gt_and_dt(gts: List[str], dts: List[str], iou_thresh: float) -> Tuple[List[bool], List[bool]]:
+    dt_match = [False] * len(dts)
+    gt_match = [False] * len(gts)
+    all_ious = defaultdict(tuple)
+    for index_gt, gt in enumerate(gts):
+        gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
+        gt_poly = polygon_from_str(gt_coors)
+        for index_dt, dt in enumerate(dts):
+            dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
+            dt_poly = polygon_from_str(dt_coors)
+            iou = calculate_iou(dt_poly, gt_poly)
+            if iou >= iou_thresh:
+                all_ious[(index_gt, index_dt)] = iou
+    sorted_ious = sorted(
+        all_ious.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+    
+    # matched gt and dt
+    for gt_dt_pair in sorted_gt_dt_pairs:
+        index_gt, index_dt = gt_dt_pair
+        if gt_match[index_gt] == False and dt_match[index_dt] == False:
+            gt_match[index_gt] = True
+            dt_match[index_dt] = True
+    return gt_match, dt_match
