@@ -44,9 +44,9 @@ def polygon_from_str(polygon_points):
     return polygon
 
 
-def polygon_iou(poly1, poly2):
+def calculate_iou(poly1, poly2):
     """
-    Intersection over union between two shapely polygons.
+    Calculate Intersection over Union (IoU) between two shapely polygons.
     """
     if not poly1.intersects(
             poly2):  # this test is fast and can accelerate calculation
@@ -121,7 +121,7 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
             for index_dt, dt in enumerate(dts):
                 dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
                 dt_poly = polygon_from_str(dt_coors)
-                iou = polygon_iou(dt_poly, gt_poly)
+                iou = calculate_iou(dt_poly, gt_poly)
                 if iou >= iou_thresh:
                     all_ious[(index_gt, index_dt)] = iou
         sorted_ious = sorted(
