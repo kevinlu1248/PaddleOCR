@@ -150,12 +150,7 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
                     dt_count += 1
 
         # unmatched dt
-        for tindex, dt_match_flag in enumerate(dt_match):
-            if dt_match_flag == False:
-                dt_str = dts[tindex][8]
-                gt_str = ''
-                ed_sum += ed(dt_str, gt_str)
-                dt_count += 1
+        ed_sum, dt_count = calculate_unmatched_dt(dts, dt_match, ed_sum, dt_count)
 
         # unmatched gt
         for tindex, gt_match_flag in enumerate(gt_match):
@@ -217,3 +212,12 @@ if __name__ == '__main__':
             gt_match[index_gt] = True
             dt_match[index_dt] = True
     return gt_match, dt_match
+    
+    def calculate_unmatched_dt(dts: List[str], dt_match: List[bool], ed_sum: int, dt_count: int) -> Tuple[int, int]:
+    for tindex, dt_match_flag in enumerate(dt_match):
+        if dt_match_flag == False:
+            dt_str = dts[tindex][8]
+            gt_str = ''
+            ed_sum += ed(dt_str, gt_str)
+            dt_count += 1
+    return ed_sum, dt_count
