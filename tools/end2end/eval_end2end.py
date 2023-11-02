@@ -195,25 +195,44 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
                 if gt_str == dt_str:
                     hit += 1
                 gt_count += 1
+
+    eps = 1e-9
+    print('hit, dt_count, gt_count', hit, dt_count, gt_count)
+    precision = hit / (dt_count + eps)
+    recall = hit / (gt_count + eps)
+    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
+    avg_edit_dist_img = ed_sum / len(val_names)
+    avg_edit_dist_field = ed_sum / (gt_count + eps)
+    character_acc = 1 - ed_sum / (num_gt_chars + eps)
+
+    print('character_acc: %.2f' % (character_acc * 100) + "%")
+    print('avg_edit_dist_field: %.2f' % (avg_edit_dist_field))
+    print('avg_edit_dist_img: %.2f' % (avg_edit_dist_img))
+    print('precision: %.2f' % (precision * 100) + "%")
+    print('recall: %.2f' % (recall * 100) + "%")
+    print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+
+if __name__ == '__main__':
+    # if len(sys.argv) != 3:
+    #     print("python3 ocr_e2e_eval.py gt_dir res_dir")
+    #     exit(-1)
+    # gt_folder = sys.argv[1]
+    # pred_folder = sys.argv[2]
+    gt_folder = sys.argv[1]
+    pred_folder = sys.argv[2]
+    e2e_eval(gt_folder, pred_folder)
+def calculate_unmatched_dt(dt_match, dts, ed_sum, dt_count):
+    for tindex, dt_match_flag in enumerate(dt_match):
+        if dt_match_flag == False:
+            dt_str = dts[tindex][8]
+            gt_str = ''
+            ed_sum += ed(dt_str, gt_str)
+            dt_count += 1
+    return ed_sum, dt_count
                 dt_count += 1
+        ed_sum, dt_count = calculate_unmatched_dt(dt_match, dts, ed_sum, dt_count)
         return gt_match, dt_match, ed_sum, num_gt_chars, hit, gt_count, dt_count
-
-        # unmatched dt
-        for tindex, dt_match_flag in enumerate(dt_match):
-            if dt_match_flag == False:
-                dt_str = dts[tindex][8]
-                gt_str = ''
-                ed_sum += ed(dt_str, gt_str)
-                dt_count += 1
-
-        # unmatched gt
-        for tindex, gt_match_flag in enumerate(gt_match):
-            if gt_match_flag == False and ignore_masks[tindex] == '0':
-                dt_str = ''
-                gt_str = gts[tindex][8]
-                ed_sum += ed(gt_str, dt_str)
-                num_gt_chars += len(gt_str)
-                gt_count += 1
 
     eps = 1e-9
     print('hit, dt_count, gt_count', hit, dt_count, gt_count)
