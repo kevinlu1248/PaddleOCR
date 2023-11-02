@@ -175,11 +175,7 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
                 num_gt_chars += len(gt_str)
                 gt_count += 1
 
-    eps = 1e-9
-    print('hit, dt_count, gt_count', hit, dt_count, gt_count)
-    precision = hit / (dt_count + eps)
-    recall = hit / (gt_count + eps)
-    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
+    eps, precision, recall, fmeasure = calculate_metrics(hit, dt_count, gt_count)
     avg_edit_dist_img = ed_sum / len(val_names)
     avg_edit_dist_field = ed_sum / (gt_count + eps)
     character_acc = 1 - ed_sum / (num_gt_chars + eps)
@@ -190,6 +186,14 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     print('precision: %.2f' % (precision * 100) + "%")
     print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def calculate_metrics(hit, dt_count, gt_count):
+    eps = 1e-9
+    print('hit, dt_count, gt_count', hit, dt_count, gt_count)
+    precision = hit / (dt_count + eps)
+    recall = hit / (gt_count + eps)
+    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
+    return eps, precision, recall, fmeasure
 
 
 if __name__ == '__main__':
