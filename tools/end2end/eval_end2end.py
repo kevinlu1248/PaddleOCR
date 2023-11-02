@@ -35,37 +35,52 @@ def strQ2B(ustring):
     return rstring
 
 
-def polygon_from_str(polygon_points):
-    """
-    Create a shapely polygon object from gt or dt line.
-    """
-    polygon_points = np.array(polygon_points).reshape(4, 2)
-    polygon = Polygon(polygon_points).convex_hull
-    return polygon
+
+def create_polygon():
+    def polygon_from_str(polygon_points):
+        """
+        Create a shapely polygon object from gt or dt line.
+        """
+        polygon_points = np.array(polygon_points).reshape(4, 2)
+        polygon = Polygon(polygon_points).convex_hull
+        return polygon
+    return polygon_from_str
+
+polygon_from_str = create_polygon()
 
 
-def polygon_iou(poly1, poly2):
-    """
-    Intersection over union between two shapely polygons.
-    """
-    if not poly1.intersects(
-            poly2):  # this test is fast and can accelerate calculation
-        iou = 0
-    else:
-        try:
-            inter_area = poly1.intersection(poly2).area
-            union_area = poly1.area + poly2.area - inter_area
-            iou = float(inter_area) / union_area
-        except shapely.geos.TopologicalError:
-            # except Exception as e:
-            #     print(e)
-            print('shapely.geos.TopologicalError occurred, iou set to 0')
+
+def calculate_iou():
+    def polygon_iou(poly1, poly2):
+        """
+        Intersection over union between two shapely polygons.
+        """
+        if not poly1.intersects(
+                poly2):  # this test is fast and can accelerate calculation
             iou = 0
-    return iou
+        else:
+            try:
+                inter_area = poly1.intersection(poly2).area
+                union_area = poly1.area + poly2.area - inter_area
+                iou = float(inter_area) / union_area
+            except shapely.geos.TopologicalError:
+                # except Exception as e:
+                #     print(e)
+                print('shapely.geos.TopologicalError occurred, iou set to 0')
+                iou = 0
+        return iou
+    return polygon_iou
+
+polygon_iou = calculate_iou()
 
 
-def ed(str1, str2):
-    return editdistance.eval(str1, str2)
+
+def calculate_edit_distance():
+    def ed(str1, str2):
+        return editdistance.eval(str1, str2)
+    return ed
+
+ed = calculate_edit_distance()
 
 
 def e2e_eval(gt_dir, res_dir, ignore_blank=False):
@@ -79,38 +94,15 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     ed_sum = 0
 
     for i, val_name in enumerate(val_names):
-        with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
-            gt_lines = [o.strip() for o in f.readlines()]
-        gts = []
-        ignore_masks = []
-        for line in gt_lines:
-            parts = line.strip().split('\t')
-            # ignore illegal data
-            if len(parts) < 9:
-                continue
-            assert (len(parts) < 11)
-            if len(parts) == 9:
-                gts.append(parts[:8] + [''])
-            else:
-                gts.append(parts[:8] + [parts[-1]])
-
-            ignore_masks.append(parts[8])
+        gt_lines = read_gt_lines(gt_dir, val_name)
+        gts, ignore_masks = process_gt_lines(gt_lines)
 
         val_path = os.path.join(res_dir, val_name)
         if not os.path.exists(val_path):
             dt_lines = []
         else:
-            with open(val_path, encoding='utf-8') as f:
-                dt_lines = [o.strip() for o in f.readlines()]
-        dts = []
-        for line in dt_lines:
-            # print(line)
-            parts = line.strip().split("\t")
-            assert (len(parts) < 10), "line error: {}".format(line)
-            if len(parts) == 8:
-                dts.append(parts + [''])
-            else:
-                dts.append(parts)
+            dt_lines = read_dt_lines(val_path)
+        dts = process_dt_lines(dt_lines)
 
         dt_match = [False] * len(dts)
         gt_match = [False] * len(gts)
@@ -165,6 +157,9 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
                 num_gt_chars += len(gt_str)
                 gt_count += 1
 
+    calculate_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+
+def calculate_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars):
     eps = 1e-9
     print('hit, dt_count, gt_count', hit, dt_count, gt_count)
     precision = hit / (dt_count + eps)
@@ -180,6 +175,44 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     print('precision: %.2f' % (precision * 100) + "%")
     print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def process_dt_lines(dt_lines):
+    dts = []
+    for line in dt_lines:
+        # print(line)
+        parts = line.strip().split("\t")
+        assert (len(parts) < 10), "line error: {}".format(line)
+        if len(parts) == 8:
+            dts.append(parts + [''])
+        else:
+            dts.append(parts)
+    return dts
+
+def process_gt_lines(gt_lines):
+    gts = []
+    ignore_masks = []
+    for line in gt_lines:
+        parts = line.strip().split('\t')
+        # ignore illegal data
+        if len(parts) < 9:
+            continue
+        assert (len(parts) < 11)
+        if len(parts) == 9:
+            gts.append(parts[:8] + [''])
+        else:
+            gts.append(parts[:8] + [parts[-1]])
+
+        ignore_masks.append(parts[8])
+    return gts, ignore_masks
+
+def read_dt_lines(val_path):
+    with open(val_path, encoding='utf-8') as f:
+        dt_lines = [o.strip() for o in f.readlines()]
+    return dt_lines
+
+def read_gt_lines(gt_dir, val_name):
+    gt_lines = read_dt_lines(os.path.join(gt_dir, val_name))
+    return gt_lines
 
 
 if __name__ == '__main__':
