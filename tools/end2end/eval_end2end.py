@@ -88,10 +88,13 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     hit = 0
     ed_sum = 0
 
+    polygon_iou = calculate_iou()
+    ed = calculate_edit_distance()
+
     for i, val_name in enumerate(val_names):
         dts, gts, ignore_masks = read_files(gt_dir, val_name, res_dir)
 
-        hit, dt_count, gt_count, ed_sum, num_gt_chars = match_gt_and_pred(dts, gts, iou_thresh, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count)
+        hit, dt_count, gt_count, ed_sum, num_gt_chars = match_gt_and_pred(dts, gts, iou_thresh, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count, polygon_iou, ed)
 
     calculate_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
 
