@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Install necessary python packages
+pip install paddlepaddle
+
+# Existing CI/CD pipeline script continues here...
