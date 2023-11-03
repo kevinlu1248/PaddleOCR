@@ -79,25 +79,8 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     ed_sum = 0
 
     for i, val_name in enumerate(val_names):
-        with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
-            gt_lines = [o.strip() for o in f.readlines()]
-        gts = []
-        ignore_masks = []
-        for line in gt_lines:
-            parts = line.strip().split('\t')
-            # ignore illegal data
-            if len(parts) < 9:
-                continue
-            assert (len(parts) < 11)
-            if len(parts) == 9:
-                gts.append(parts[:8] + [''])
-            else:
-                gts.append(parts[:8] + [parts[-1]])
-
-            ignore_masks.append(parts[8])
-
-        val_path = os.path.join(res_dir, val_name)
-        if not os.path.exists(val_path):
+        gts, ignore_masks = read_gt_file(os.path.join(gt_dir, val_name))
+        dts = read_dt_file(os.path.join(res_dir, val_name))
             dt_lines = []
         else:
             with open(val_path, encoding='utf-8') as f:
@@ -115,38 +98,13 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
         dt_match = [False] * len(dts)
         gt_match = [False] * len(gts)
         all_ious = defaultdict(tuple)
-        for index_gt, gt in enumerate(gts):
-            gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
-            gt_poly = polygon_from_str(gt_coors)
-            for index_dt, dt in enumerate(dts):
-                dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
-                dt_poly = polygon_from_str(dt_coors)
-                iou = polygon_iou(dt_poly, gt_poly)
-                if iou >= iou_thresh:
-                    all_ious[(index_gt, index_dt)] = iou
-        sorted_ious = sorted(
-            all_ious.items(), key=operator.itemgetter(1), reverse=True)
-        sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+        dt_match = [False] * len(dts)
+        gt_match = [False] * len(gts)
+        all_ious = calculate_ious(gts, dts, iou_thresh)
+        sorted_gt_dt_pairs = sort_ious(all_ious)
 
         # matched gt and dt
-        for gt_dt_pair in sorted_gt_dt_pairs:
-            index_gt, index_dt = gt_dt_pair
-            if gt_match[index_gt] == False and dt_match[index_dt] == False:
-                gt_match[index_gt] = True
-                dt_match[index_dt] = True
-                if ignore_blank:
-                    gt_str = strQ2B(gts[index_gt][8]).replace(" ", "")
-                    dt_str = strQ2B(dts[index_dt][8]).replace(" ", "")
-                else:
-                    gt_str = strQ2B(gts[index_gt][8])
-                    dt_str = strQ2B(dts[index_dt][8])
-                if ignore_masks[index_gt] == '0':
-                    ed_sum += ed(gt_str, dt_str)
-                    num_gt_chars += len(gt_str)
-                    if gt_str == dt_str:
-                        hit += 1
-                    gt_count += 1
-                    dt_count += 1
+        hit, ed_sum, num_gt_chars, gt_count, dt_count = calculate_metrics_for_matched_pairs(sorted_gt_dt_pairs, gt_match, dt_match, gts, dts, ignore_masks, ignore_blank, hit, ed_sum, num_gt_chars, gt_count, dt_count)
 
         # unmatched dt
         for tindex, dt_match_flag in enumerate(dt_match):
@@ -154,40 +112,27 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
                 dt_str = dts[tindex][8]
                 gt_str = ''
                 ed_sum += ed(dt_str, gt_str)
-                dt_count += 1
-
-        # unmatched gt
+        ed_sum, dt_count = calculate_metrics_for_unmatched_dts(dt_match, dts, ed_sum, dt_count)
+        ed_sum, num_gt_chars, gt_count = calculate_metrics_for_unmatched_gts(gt_match, gts, ignore_masks, ed_sum, num_gt_chars, gt_count)
         for tindex, gt_match_flag in enumerate(gt_match):
             if gt_match_flag == False and ignore_masks[tindex] == '0':
                 dt_str = ''
                 gt_str = gts[tindex][8]
                 ed_sum += ed(gt_str, dt_str)
                 num_gt_chars += len(gt_str)
-                gt_count += 1
-
     eps = 1e-9
-    print('hit, dt_count, gt_count', hit, dt_count, gt_count)
-    precision = hit / (dt_count + eps)
-    recall = hit / (gt_count + eps)
-    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
-    avg_edit_dist_img = ed_sum / len(val_names)
-    avg_edit_dist_field = ed_sum / (gt_count + eps)
-    character_acc = 1 - ed_sum / (num_gt_chars + eps)
-
-    print('character_acc: %.2f' % (character_acc * 100) + "%")
-    print('avg_edit_dist_field: %.2f' % (avg_edit_dist_field))
-    print('avg_edit_dist_img: %.2f' % (avg_edit_dist_img))
-    print('precision: %.2f' % (precision * 100) + "%")
-    print('recall: %.2f' % (recall * 100) + "%")
-    print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+    precision, recall, fmeasure, avg_edit_dist_img, avg_edit_dist_field, character_acc = calculate_final_metrics(hit, dt_count, gt_count, ed_sum, len(val_names), num_gt_chars, eps)
+    print_results(hit, dt_count, gt_count, character_acc, avg_edit_dist_field, avg_edit_dist_img, precision, recall, fmeasure)
 
 
 if __name__ == '__main__':
-    # if len(sys.argv) != 3:
-    #     print("python3 ocr_e2e_eval.py gt_dir res_dir")
-    #     exit(-1)
-    # gt_folder = sys.argv[1]
-    # pred_folder = sys.argv[2]
+    gt_folder = sys.argv[1]
+    pred_folder = sys.argv[2]
+    e2e_eval(gt_folder, pred_folder)
+
+
+if __name__ == '__main__':
+# Code moved to read_files function
     gt_folder = sys.argv[1]
     pred_folder = sys.argv[2]
     e2e_eval(gt_folder, pred_folder)
