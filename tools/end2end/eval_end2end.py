@@ -126,7 +126,38 @@ def test_calculate_metrics():
     assert character_acc == 1.0, f'Expected 1.0, but got {character_acc}'
 
 def test_print_results():
-    # Add test code here
+    # Redirect stdout to a stringIO object
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    
+    # Call the print_results function with dummy metrics
+    print_results(1.0, 1.0, 1.0, 0.0, 0.0, 1.0)
+    
+    # Get the output and restore stdout
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+    
+    # Assert that the output matches the expected output
+    expected_output = 'character_acc: 100.00%\navg_edit_dist_field: 0.00\navg_edit_dist_img: 0.00\nprecision: 100.00%\nrecall: 100.00%\nfmeasure: 100.00%\n'
+    assert output == expected_output, f'Expected "{expected_output}", but got "{output}"'
+    
+    # Test with different decimal places
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    print_results(0.123456789, 0.987654321, 0.555555555, 0.111111111, 0.999999999, 0.666666666)
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+    expected_output = 'character_acc: 66.67%\navg_edit_dist_field: 0.11\navg_edit_dist_img: 1.00\nprecision: 12.35%\nrecall: 98.77%\nfmeasure: 55.56%\n'
+    assert output == expected_output, f'Expected "{expected_output}", but got "{output}"'
+    
+    # Test with zero values
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    print_results(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+    expected_output = 'character_acc: 0.00%\navg_edit_dist_field: 0.00\navg_edit_dist_img: 0.00\nprecision: 0.00%\nrecall: 0.00%\nfmeasure: 0.00%\n'
+    assert output == expected_output, f'Expected "{expected_output}", but got "{output}"'
 
 def test_e2e_eval():
     # Create dummy ground truth and prediction files
