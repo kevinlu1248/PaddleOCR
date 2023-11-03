@@ -109,7 +109,21 @@ def test_read_files():
     # Add test code here
 
 def test_calculate_metrics():
-    # Add test code here
+    # Create dummy ground truth and prediction data
+    gts = [[['0', '0', '10', '0', '10', '10', '0', '10', '0'], ['0', '0', '10', '0', '10', '10', '0', '10', '0']]]
+    dts = [[['0', '0', '10', '0', '10', '10', '0', '10', '0'], ['0', '0', '10', '0', '10', '10', '0', '10', '0']]]
+    ignore_masks = ['0', '0']
+
+    # Call the calculate_metrics function with this data
+    precision, recall, fmeasure, avg_edit_dist_img, avg_edit_dist_field, character_acc = calculate_metrics(gts, dts, ignore_masks, polygon_iou, strQ2B, ed)
+
+    # Assert that the returned metrics match the expected metrics
+    assert precision == 1.0, f'Expected 1.0, but got {precision}'
+    assert recall == 1.0, f'Expected 1.0, but got {recall}'
+    assert fmeasure == 1.0, f'Expected 1.0, but got {fmeasure}'
+    assert avg_edit_dist_img == 0.0, f'Expected 0.0, but got {avg_edit_dist_img}'
+    assert avg_edit_dist_field == 0.0, f'Expected 0.0, but got {avg_edit_dist_field}'
+    assert character_acc == 1.0, f'Expected 1.0, but got {character_acc}'
 
 def test_print_results():
     # Add test code here
@@ -229,7 +243,92 @@ def test_calculate_metrics():
     # Add test code here
 
 def test_print_results():
-    # Add test code here
+    def test_e2e_eval():
+        # Create dummy ground truth and prediction files
+        gt_dir = 'test_gt_dir'
+        res_dir = 'test_res_dir'
+        os.makedirs(gt_dir, exist_ok=True)
+        os.makedirs(res_dir, exist_ok=True)
+        with open(os.path.join(gt_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+            f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+        with open(os.path.join(res_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+            f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+    
+        # Redirect stdout to a stringIO object
+        stdout = sys.stdout
+        sys.stdout = io.StringIO()
+    
+        # Call the e2e_eval function with these files
+        e2e_eval(gt_dir, res_dir)
+    
+        # Get the output and restore stdout
+        output = sys.stdout.getvalue()
+        sys.stdout = stdout
+    
+        # Assert that the output matches the expected output
+        expected_output = 'start testing...\nhit, dt_count, gt_count 1 1 1\ncharacter_acc: 100.00%\navg_edit_dist_field: 0.00\navg_edit_dist_img: 0.00\nprecision: 100.00%\nrecall: 100.00%\nfmeasure: 100.00%\n'
+        assert output == expected_output, f'Expected "{expected_output}", but got "{output}"'
+    
+        # Clean up
+        shutil.rmtree(gt_dir)
+        shutil.rmtree(res_dir)
+    res_dir = 'test_res_dir'
+    os.makedirs(gt_dir, exist_ok=True)
+    os.makedirs(res_dir, exist_ok=True)
+    with open(os.path.join(gt_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+    with open(os.path.join(res_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+
+    # Redirect stdout to a stringIO object
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+
+    # Call the e2e_eval function with these files
+    e2e_eval(gt_dir, res_dir)
+
+    # Get the output and restore stdout
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+
+    # Assert that the output matches the expected output
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+
+    # Call the print_results function with dummy metrics
+    print_results(1.0, 1.0, 1.0, 0.0, 0.0, 1.0)
+
+    # Get the output and restore stdout
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+
+    # Assert that the output matches the expected output
+    expected_output = 'character_acc: 100.00%\navg_edit_dist_field: 0.00\navg_edit_dist_img: 0.00\nprecision: 100.00%\nrecall: 100.00%\nfmeasure: 100.00%\n'
+    assert output == expected_output, f'Expected "{expected_output}", but got "{output}"'
+
+def test_e2e_eval():
+    # Create dummy ground truth and prediction files
+    gt_dir = 'test_gt_dir'
+    res_dir = 'test_res_dir'
+    os.makedirs(gt_dir, exist_ok=True)
+    os.makedirs(res_dir, exist_ok=True)
+    with open(os.path.join(gt_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+    with open(os.path.join(res_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+
+    # Redirect stdout to a stringIO object
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+
+    # Call the e2e_eval function with these files
+    e2e_eval(gt_dir, res_dir)
+
+    # Get the output and restore stdout
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+
+    # Assert that the output matches the expected output
 
 def test_e2e_eval():
     # Add test code here
