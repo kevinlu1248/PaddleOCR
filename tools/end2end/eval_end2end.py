@@ -44,28 +44,38 @@ def polygon_from_str(polygon_points):
     return polygon
 
 
-def polygon_iou(poly1, poly2):
-    """
-    Intersection over union between two shapely polygons.
-    """
-    if not poly1.intersects(
-            poly2):  # this test is fast and can accelerate calculation
-        iou = 0
-    else:
-        try:
-            inter_area = poly1.intersection(poly2).area
-            union_area = poly1.area + poly2.area - inter_area
-            iou = float(inter_area) / union_area
-        except shapely.geos.TopologicalError:
-            # except Exception as e:
-            #     print(e)
-            print('shapely.geos.TopologicalError occurred, iou set to 0')
+
+def calculate_iou():
+    def polygon_iou(poly1, poly2):
+        """
+        Intersection over union between two shapely polygons.
+        """
+        if not poly1.intersects(
+                poly2):  # this test is fast and can accelerate calculation
             iou = 0
-    return iou
+        else:
+            try:
+                inter_area = poly1.intersection(poly2).area
+                union_area = poly1.area + poly2.area - inter_area
+                iou = float(inter_area) / union_area
+            except shapely.geos.TopologicalError:
+                # except Exception as e:
+                #     print(e)
+                print('shapely.geos.TopologicalError occurred, iou set to 0')
+                iou = 0
+        return iou
+    return polygon_iou
+
+polygon_iou = calculate_iou()
 
 
-def ed(str1, str2):
-    return editdistance.eval(str1, str2)
+
+def calculate_edit_distance():
+    def ed(str1, str2):
+        return editdistance.eval(str1, str2)
+    return ed
+
+ed = calculate_edit_distance()
 
 
 def e2e_eval(gt_dir, res_dir, ignore_blank=False):
@@ -167,12 +177,9 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
 
     eps = 1e-9
     print('hit, dt_count, gt_count', hit, dt_count, gt_count)
-    precision = hit / (dt_count + eps)
-    recall = hit / (gt_count + eps)
-    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
-    avg_edit_dist_img = ed_sum / len(val_names)
-    avg_edit_dist_field = ed_sum / (gt_count + eps)
-    character_acc = 1 - ed_sum / (num_gt_chars + eps)
+    precision, recall, fmeasure = calculate_metrics(hit, dt_count, eps, gt_count)
+    avg_edit_dist_field, avg_edit_dist_img = calculate_avg_edit_distance(ed_sum, val_names, gt_count, eps)
+    character_acc = calculate_character_acc(ed_sum, num_gt_chars, eps)
 
     print('character_acc: %.2f' % (character_acc * 100) + "%")
     print('avg_edit_dist_field: %.2f' % (avg_edit_dist_field))
@@ -180,6 +187,21 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
     print('precision: %.2f' % (precision * 100) + "%")
     print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def calculate_character_acc(ed_sum, num_gt_chars, eps):
+    character_acc = 1 - ed_sum / (num_gt_chars + eps)
+    return character_acc
+
+def calculate_avg_edit_distance(ed_sum, val_names, gt_count, eps):
+    avg_edit_dist_img = ed_sum / len(val_names)
+    avg_edit_dist_field = ed_sum / (gt_count + eps)
+    return avg_edit_dist_field, avg_edit_dist_img
+
+def calculate_metrics(hit, dt_count, eps, gt_count):
+    precision = hit / (dt_count + eps)
+    recall = hit / (gt_count + eps)
+    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
+    return precision, recall, fmeasure
 
 
 if __name__ == '__main__':
