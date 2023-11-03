@@ -90,6 +90,22 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
         ed_sum, dt_count, gt_count, num_gt_chars = calculate_edit_distance(dt_match, dts, ed_sum, dt_count, gt_match, ignore_masks, gts, num_gt_chars, gt_count)
 
     calculate_final_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+# Test for e2e_eval function
+def test_e2e_eval():
+    gt_dir = "test_gt_dir"
+    res_dir = "test_res_dir"
+    ignore_blank = False
+    e2e_eval(gt_dir, res_dir, ignore_blank)
+    # Add assertions to check the correctness of the function
+    # This can be done by capturing the stdout and comparing it with the expected output
+    # Here is an example of how to do it:
+    from io import StringIO 
+    import sys
+    output = StringIO()
+    sys.stdout = output
+    e2e_eval(gt_dir, res_dir, ignore_blank)
+    sys.stdout = sys.__stdout__
+    assert output.getvalue() == "expected output"
 
 def calculate_final_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars):
     eps = 1e-9
@@ -126,6 +142,23 @@ def calculate_edit_distance(dt_match, dts, ed_sum, dt_count, gt_match, ignore_ma
             num_gt_chars += len(gt_str)
             gt_count += 1
     return ed_sum, dt_count, gt_count, num_gt_chars
+# Test for calculate_edit_distance function
+def test_calculate_edit_distance():
+    dt_match = []
+    dts = []
+    ed_sum = 0
+    dt_count = 0
+    gt_match = []
+    ignore_masks = []
+    gts = []
+    num_gt_chars = 0
+    gt_count = 0
+    ed_sum, dt_count, gt_count, num_gt_chars = calculate_edit_distance(dt_match, dts, ed_sum, dt_count, gt_match, ignore_masks, gts, num_gt_chars, gt_count)
+    # Add assertions to check the correctness of ed_sum, dt_count, gt_count, num_gt_chars
+    assert isinstance(ed_sum, int)
+    assert isinstance(dt_count, int)
+    assert isinstance(gt_count, int)
+    assert isinstance(num_gt_chars, int)
 
 def match_gt_dt(sorted_gt_dt_pairs, gt_match, dt_match, ignore_blank, gts, dts, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count):
     # matched gt and dt
@@ -166,6 +199,55 @@ def calculate_iou(dts, gts, iou_thresh):
         all_ious.items(), key=operator.itemgetter(1), reverse=True)
     sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
     return sorted_gt_dt_pairs, gt_match, dt_match
+# Test for calculate_iou function
+def test_calculate_iou():
+    dts = []
+    gts = []
+    iou_thresh = 0.5
+    sorted_gt_dt_pairs, gt_match, dt_match = calculate_iou(dts, gts, iou_thresh)
+    # Add assertions to check the correctness of sorted_gt_dt_pairs, gt_match, dt_match
+    assert isinstance(sorted_gt_dt_pairs, list)
+    assert isinstance(gt_match, list)
+    assert isinstance(dt_match, list)
+        def test_match_gt_dt():
+        sorted_gt_dt_pairs = []
+        gt_match = []
+        dt_match = []
+        ignore_blank = False
+        gts = []
+        dts = []
+        ignore_masks = []
+        ed_sum = 0
+        num_gt_chars = 0
+        hit = 0
+        gt_count = 0
+        dt_count = 0
+        ed_sum, num_gt_chars, hit, gt_count, dt_count = match_gt_dt(sorted_gt_dt_pairs, gt_match, dt_match, ignore_blank, gts, dts, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count)
+        # Add assertions to check the correctness of ed_sum, num_gt_chars, hit, gt_count, dt_count
+        assert isinstance(ed_sum, int)
+        assert isinstance(num_gt_chars, int)
+        assert isinstance(hit, int)
+        assert isinstance(gt_count, int)
+        assert isinstance(dt_count, int)
+    return ed_sum, num_gt_chars, hit, gt_count, dt_count
+
+def calculate_iou(dts, gts, iou_thresh):
+    dt_match = [False] * len(dts)
+    gt_match = [False] * len(gts)
+    all_ious = defaultdict(tuple)
+    for index_gt, gt in enumerate(gts):
+        gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
+        gt_poly = polygon_from_str(gt_coors)
+        for index_dt, dt in enumerate(dts):
+            dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
+            dt_poly = polygon_from_str(dt_coors)
+            iou = polygon_iou(dt_poly, gt_poly)
+            if iou >= iou_thresh:
+                all_ious[(index_gt, index_dt)] = iou
+    sorted_ious = sorted(
+        all_ious.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+    return sorted_gt_dt_pairs, gt_match, dt_match
 
 def read_gt_dt_lines(gt_dir, val_name, res_dir):
     with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
@@ -187,6 +269,16 @@ def read_gt_dt_lines(gt_dir, val_name, res_dir):
 
     val_path = os.path.join(res_dir, val_name)
     if not os.path.exists(val_path):
+# Test for read_gt_dt_lines function
+def test_read_gt_dt_lines():
+    gt_dir = "test_gt_dir"
+    val_name = "test_val_name"
+    res_dir = "test_res_dir"
+    dts, gts, ignore_masks = read_gt_dt_lines(gt_dir, val_name, res_dir)
+    # Add assertions to check the correctness of dts, gts, ignore_masks
+    assert isinstance(dts, list)
+    assert isinstance(gts, list)
+    assert isinstance(ignore_masks, list)
         dt_lines = []
     else:
         with open(val_path, encoding='utf-8') as f:
@@ -205,10 +297,43 @@ def read_gt_dt_lines(gt_dir, val_name, res_dir):
 
 if __name__ == '__main__':
     # if len(sys.argv) != 3:
-    #     print("python3 ocr_e2e_eval.py gt_dir res_dir")
-    #     exit(-1)
-    # gt_folder = sys.argv[1]
-    # pred_folder = sys.argv[2]
+    calculate_final_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+
+def calculate_final_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars):
+    eps = 1e-9
+    print('hit, dt_count, gt_count', hit, dt_count, gt_count)
+    precision = hit / (dt_count + eps)
+    recall = hit / (gt_count + eps)
+    fmeasure = 2.0 * precision * recall / (precision + recall + eps)
+    avg_edit_dist_img = ed_sum / len(val_names)
+    avg_edit_dist_field = ed_sum / (gt_count + eps)
+    character_acc = 1 - ed_sum / (num_gt_chars + eps)
+
+    print('character_acc: %.2f' % (character_acc * 100) + "%")
+    print('avg_edit_dist_field: %.2f' % (avg_edit_dist_field))
+    print('avg_edit_dist_img: %.2f' % (avg_edit_dist_img))
+    print('precision: %.2f' % (precision * 100) + "%")
+    print('recall: %.2f' % (recall * 100) + "%")
+    print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+# Test for calculate_final_metrics function
+def test_calculate_final_metrics():
+    hit = 0
+    dt_count = 0
+    gt_count = 0
+    ed_sum = 0
+    val_names = []
+    num_gt_chars = 0
+    calculate_final_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+    # Add assertions to check the correctness of the printed results
+    # This can be done by capturing the stdout and comparing it with the expected output
+    # Here is an example of how to do it:
+    from io import StringIO 
+    import sys
+    output = StringIO()
+    sys.stdout = output
+    calculate_final_metrics(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+    sys.stdout = sys.__stdout__
+    assert output.getvalue() == "expected output"
     gt_folder = sys.argv[1]
     pred_folder = sys.argv[2]
     e2e_eval(gt_folder, pred_folder)
