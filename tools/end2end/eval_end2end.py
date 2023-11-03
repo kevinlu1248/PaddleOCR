@@ -104,10 +104,51 @@ def calculate_polygon_iou():
                 union_area = poly1.area + poly2.area - inter_area
                 iou = float(inter_area) / union_area
             except shapely.geos.TopologicalError:
-                # except Exception as e:
-                #     print(e)
-                print('shapely.geos.TopologicalError occurred, iou set to 0')
-                iou = 0
+            if not os.path.exists(val_path):
+def test_read_files():
+    # Add test code here
+
+def test_calculate_metrics():
+    # Add test code here
+
+def test_print_results():
+    # Add test code here
+
+def test_e2e_eval():
+    # Create dummy ground truth and prediction files
+    gt_dir = 'test_gt_dir'
+    res_dir = 'test_res_dir'
+    os.makedirs(gt_dir, exist_ok=True)
+    os.makedirs(res_dir, exist_ok=True)
+    with open(os.path.join(gt_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+    with open(os.path.join(res_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+
+    # Redirect stdout to a stringIO object
+    stdout = sys.stdout
+    sys.stdout = io.StringIO()
+
+    # Call the e2e_eval function with these files
+    e2e_eval(gt_dir, res_dir)
+
+    # Get the output and restore stdout
+    output = sys.stdout.getvalue()
+    sys.stdout = stdout
+
+    # Assert that the output matches the expected output
+    expected_output = 'start testing...\nhit, dt_count, gt_count 1 1 1\ncharacter_acc: 100.00%\navg_edit_dist_field: 0.00\navg_edit_dist_img: 0.00\nprecision: 100.00%\nrecall: 100.00%\nfmeasure: 100.00%\n'
+    assert output == expected_output, f'Expected "{expected_output}", but got "{output}"'
+
+    # Clean up
+    shutil.rmtree(gt_dir)
+    shutil.rmtree(res_dir)
+                dt_lines = []
+            else:
+                with open(val_path, encoding='utf-8') as f:
+                    dt_lines = [o.strip() for o in f.readlines()]
+            dts = []
+            for line in dt_lines:
         return iou
     return polygon_iou
 def print_results(precision, recall, fmeasure, avg_edit_dist_img, avg_edit_dist_field, character_acc):
@@ -163,7 +204,26 @@ def process_results_and_calculate_metrics(polygon_iou, strQ2B, ed, polygon_from_
             val_path = os.path.join(res_dir, val_name)
             if not os.path.exists(val_path):
 def test_read_files():
-    # Add test code here
+    # Create dummy ground truth and prediction files
+    gt_dir = 'test_gt_dir'
+    res_dir = 'test_res_dir'
+    os.makedirs(gt_dir, exist_ok=True)
+    os.makedirs(res_dir, exist_ok=True)
+    with open(os.path.join(gt_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+    with open(os.path.join(res_dir, 'test.txt'), 'w', encoding='utf-8') as f:
+        f.write('0\t0\t10\t0\t10\t10\t0\t10\t0\n')
+
+    # Call the read_files function with these files
+    results = read_files(gt_dir, res_dir)
+
+    # Assert that the returned results match the expected results
+    expected_results = [([['0', '0', '10', '0', '10', '10', '0', '10', '']], [['0', '0', '10', '0', '10', '10', '0', '10', '']], ['0'])]
+    assert results == expected_results, f'Expected {expected_results}, but got {results}'
+
+    # Clean up
+    shutil.rmtree(gt_dir)
+    shutil.rmtree(res_dir)
 
 def test_calculate_metrics():
     # Add test code here
