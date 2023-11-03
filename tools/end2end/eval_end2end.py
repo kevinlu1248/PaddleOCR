@@ -90,6 +90,53 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
         ed_sum, dt_count, gt_count, num_gt_chars = calculate_iou(dt_match, dts, ed_sum, dt_count, gt_match, ignore_masks, gts, num_gt_chars, gt_count)
 
     read_gt_dt_lines(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+# Test for e2e_eval function
+def test_e2e_eval():
+    # Mock data
+    gt_dir = "test_gt_dir"
+    res_dir = "test_res_dir"
+    ignore_blank = False
+
+    # Mock return values for functions called in e2e_eval
+    mock_dts = [["dt1"], ["dt2"]]
+    mock_gts = [["gt1"], ["gt2"]]
+    mock_ignore_masks = ["0", "1"]
+    mock_sorted_gt_dt_pairs = [(0, 1), (1, 0)]
+    mock_gt_match = [True, False]
+    mock_dt_match = [False, True]
+    mock_ed_sum = 2
+    mock_num_gt_chars = 10
+    mock_hit = 1
+    mock_gt_count = 2
+    mock_dt_count = 2
+
+    # Mock os.listdir to return a specific list
+    os.listdir = MagicMock(return_value=["file1", "file2"])
+
+    # Mock calculate_final_metrics to return specific values
+    calculate_final_metrics = MagicMock(return_value=(mock_dts, mock_gts, mock_ignore_masks))
+
+    # Mock calculate_edit_distance to return specific values
+    calculate_edit_distance = MagicMock(return_value=(mock_sorted_gt_dt_pairs, mock_gt_match, mock_dt_match))
+
+    # Mock match_gt_dt to return specific values
+    match_gt_dt = MagicMock(return_value=(mock_ed_sum, mock_num_gt_chars, mock_hit, mock_gt_count, mock_dt_count))
+
+    # Mock calculate_iou to return specific values
+    calculate_iou = MagicMock(return_value=(mock_ed_sum, mock_dt_count, mock_gt_count, mock_num_gt_chars))
+
+    # Mock read_gt_dt_lines to do nothing
+    read_gt_dt_lines = MagicMock()
+
+    # Call e2e_eval
+    e2e_eval(gt_dir, res_dir, ignore_blank)
+
+    # Assert that the mocked functions were called with the expected arguments
+    calculate_final_metrics.assert_called_with(gt_dir, "file1", res_dir)
+    calculate_edit_distance.assert_called_with(mock_dts, mock_gts, 0.5)
+    match_gt_dt.assert_called_with(mock_sorted_gt_dt_pairs, mock_gt_match, mock_dt_match, ignore_blank, mock_gts, mock_dts, mock_ignore_masks, 0, 0, 0, 0, 0)
+    calculate_iou.assert_called_with(mock_dt_match, mock_dts, mock_ed_sum, mock_dt_count, mock_gt_match, mock_ignore_masks, mock_gts, mock_num_gt_chars, mock_gt_count)
+    read_gt_dt_lines.assert_called_with(mock_hit, mock_dt_count, mock_gt_count, mock_ed_sum, ["file1", "file2"], mock_num_gt_chars)
 
 def calculate_final_metrics(gt_dir, val_name, res_dir):
     with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
@@ -143,6 +190,27 @@ def calculate_edit_distance(dts, gts, iou_thresh):
         all_ious.items(), key=operator.itemgetter(1), reverse=True)
     sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
     return sorted_gt_dt_pairs, gt_match, dt_match
+# Test for calculate_edit_distance function
+def test_calculate_edit_distance():
+    # Mock data
+    dts = [["1", "2", "3", "4", "5", "6", "7", "8", ""], ["9", "10", "11", "12", "13", "14", "15", "16", "test"]]
+    gts = [["1", "2", "3", "4", "5", "6", "7", "8", ""], ["9", "10", "11", "12", "13", "14", "15", "16", "test"]]
+    iou_thresh = 0.5
+
+    # Mock return value for polygon_from_str
+    mock_polygon = MagicMock()
+    polygon_from_str = MagicMock(return_value=mock_polygon)
+
+    # Mock return value for polygon_iou
+    polygon_iou = MagicMock(return_value=0.6)
+
+    # Call calculate_edit_distance
+    sorted_gt_dt_pairs, gt_match, dt_match = calculate_edit_distance(dts, gts, iou_thresh)
+
+    # Assert that the returned values are as expected
+    assert sorted_gt_dt_pairs == [(0, 0), (1, 1)]
+    assert gt_match == [False, False]
+    assert dt_match == [False, False]
 
 def match_gt_dt(sorted_gt_dt_pairs, gt_match, dt_match, ignore_blank, gts, dts, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count):
     # matched gt and dt
@@ -209,6 +277,79 @@ if __name__ == '__main__':
     #     exit(-1)
     # gt_folder = sys.argv[1]
     # pred_folder = sys.argv[2]
+    gt_folder = sys.argv[1]
+    pred_folder = sys.argv[2]
+    e2e_eval(gt_folder, pred_folder)
+# Test for read_gt_dt_lines function
+def test_read_gt_dt_lines():
+    # Mock data
+    hit = 1
+    dt_count = 2
+    gt_count = 2
+    ed_sum = 2
+    val_names = ["file1", "file2"]
+    num_gt_chars = 10
+
+    # Mock print to do nothing
+    print = MagicMock()
+
+    # Call read_gt_dt_lines
+    read_gt_dt_lines(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+
+    # Assert that print was called with the expected arguments
+    print.assert_any_call('hit, dt_count, gt_count', hit, dt_count, gt_count)
+    print.assert_any_call('character_acc: %.2f' % ((1 - ed_sum / (num_gt_chars + 1e-9)) * 100) + "%")
+    print.assert_any_call('avg_edit_dist_field: %.2f' % (ed_sum / (gt_count + 1e-9)))
+    print.assert_any_call('avg_edit_dist_img: %.2f' % (ed_sum / len(val_names)))
+    print.assert_any_call('precision: %.2f' % ((hit / (dt_count + 1e-9)) * 100) + "%")
+    print.assert_any_call('recall: %.2f' % ((hit / (gt_count + 1e-9)) * 100) + "%")
+    print.assert_any_call('fmeasure: %.2f' % ((2.0 * (hit / (dt_count + 1e-9)) * (hit / (gt_count + 1e-9)) / ((hit / (dt_count + 1e-9)) + (hit / (gt_count + 1e-9)) + 1e-9)) * 100) + "%")
+
+def calculate_final_metrics(gt_dir, val_name, res_dir):
+    with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
+        gt_lines = [o.strip() for o in f.readlines()]
+    gts = []
+    ignore_masks = []
+    for line in gt_lines:
+        parts = line.strip().split('\t')
+        # ignore illegal data
+        if len(parts) < 9:
+            continue
+        assert (len(parts) < 11)
+        if len(parts) == 9:
+            gts.append(parts[:8] + [''])
+        else:
+            gts.append(parts[:8] + [parts[-1]])
+
+        ignore_masks.append(parts[8])
+
+    val_path = os.path.join(res_dir, val_name)
+    if not os.path.exists(val_path):
+# Test for calculate_final_metrics function
+def test_calculate_final_metrics():
+    # Mock data
+    gt_dir = "test_gt_dir"
+    val_name = "test_val_name"
+    res_dir = "test_res_dir"
+
+    # Mock file content
+    mock_file_content = "1\t2\t3\t4\t5\t6\t7\t8\t0\n9\t10\t11\t12\t13\t14\t15\t16\t1\ttest"
+
+    # Mock os.path.join to return a specific path
+    os.path.join = MagicMock(return_value="test_path")
+
+    # Mock os.path.exists to return True
+    os.path.exists = MagicMock(return_value=True)
+
+    # Mock open and readlines to return specific content
+    open = mock_open(read_data=mock_file_content)
+    with patch("builtins.open", open):
+        dts, gts, ignore_masks = calculate_final_metrics(gt_dir, val_name, res_dir)
+
+    # Assert that the returned values are as expected
+    assert dts == [["1", "2", "3", "4", "5", "6", "7", "8", ""], ["9", "10", "11", "12", "13", "14", "15", "16", "test"]]
+    assert gts == [["1", "2", "3", "4", "5", "6", "7", "8", ""], ["9", "10", "11", "12", "13", "14", "15", "16", "test"]]
+    assert ignore_masks == ["0", "1"]
     gt_folder = sys.argv[1]
     pred_folder = sys.argv[2]
     e2e_eval(gt_folder, pred_folder)
