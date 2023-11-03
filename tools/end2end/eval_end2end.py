@@ -42,6 +42,41 @@ strQ2B = convert_unicode_to_ascii()
 
 
 def create_polygon_from_str():
+def read_files(gt_dir, res_dir):
+    val_names = os.listdir(gt_dir)
+    results = []
+    for i, val_name in enumerate(val_names):
+        with open(os.path.join(gt_dir, val_name), encoding='utf-8') as f:
+            gt_lines = [o.strip() for o in f.readlines()]
+        gts = []
+        ignore_masks = []
+        for line in gt_lines:
+            parts = line.strip().split('\t')
+            if len(parts) < 9:
+                continue
+            assert (len(parts) < 11)
+            if len(parts) == 9:
+                gts.append(parts[:8] + [''])
+            else:
+                gts.append(parts[:8] + [parts[-1]])
+            ignore_masks.append(parts[8])
+
+        val_path = os.path.join(res_dir, val_name)
+        if not os.path.exists(val_path):
+            dt_lines = []
+        else:
+            with open(val_path, encoding='utf-8') as f:
+                dt_lines = [o.strip() for o in f.readlines()]
+        dts = []
+        for line in dt_lines:
+            parts = line.strip().split("\t")
+            assert (len(parts) < 10), "line error: {}".format(line)
+            if len(parts) == 8:
+                dts.append(parts + [''])
+            else:
+                dts.append(parts)
+        results.append((gts, dts, ignore_masks))
+    return results
     def polygon_from_str(polygon_points):
         """
         Create a shapely polygon object from gt or dt line.
@@ -75,6 +110,13 @@ def calculate_polygon_iou():
                 iou = 0
         return iou
     return polygon_iou
+def print_results(precision, recall, fmeasure, avg_edit_dist_img, avg_edit_dist_field, character_acc):
+    print('character_acc: %.2f' % (character_acc * 100) + "%")
+    print('avg_edit_dist_field: %.2f' % (avg_edit_dist_field))
+    print('avg_edit_dist_img: %.2f' % (avg_edit_dist_img))
+    print('precision: %.2f' % (precision * 100) + "%")
+    print('recall: %.2f' % (recall * 100) + "%")
+    print('fmeasure: %.2f' % (fmeasure * 100) + "%")
 
 polygon_iou = calculate_polygon_iou()
 
@@ -120,6 +162,17 @@ def process_results_and_calculate_metrics(polygon_iou, strQ2B, ed, polygon_from_
 
             val_path = os.path.join(res_dir, val_name)
             if not os.path.exists(val_path):
+def test_read_files():
+    # Add test code here
+
+def test_calculate_metrics():
+    # Add test code here
+
+def test_print_results():
+    # Add test code here
+
+def test_e2e_eval():
+    # Add test code here
                 dt_lines = []
             else:
                 with open(val_path, encoding='utf-8') as f:
@@ -208,11 +261,88 @@ e2e_eval = process_results_and_calculate_metrics(polygon_iou, strQ2B, ed, polygo
 
 
 if __name__ == '__main__':
-    # if len(sys.argv) != 3:
-    #     print("python3 ocr_e2e_eval.py gt_dir res_dir")
-    #     exit(-1)
-    # gt_folder = sys.argv[1]
-    # pred_folder = sys.argv[2]
+    def create_polygon_from_str():
+        def polygon_from_str(polygon_points):
+            """
+            Create a shapely polygon object from gt or dt line.
+            """
+            polygon_points = np.array(polygon_points).reshape(4, 2)
+            polygon = Polygon(polygon_points).convex_hull
+            return polygon
+        return polygon_from_str
+    
+    polygon_from_str = create_polygon_from_str()
+    
+    
+    
+    def calculate_polygon_iou():
+    def calculate_metrics(gts, dts, ignore_masks, polygon_iou, strQ2B, ed):
+        iou_thresh = 0.5
+        num_gt_chars = 0
+        gt_count = 0
+        dt_count = 0
+        hit = 0
+        ed_sum = 0
+    
+        dt_match = [False] * len(dts)
+        gt_match = [False] * len(gts)
+        all_ious = defaultdict(tuple)
+        for index_gt, gt in enumerate(gts):
+            gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
+            gt_poly = polygon_from_str(gt_coors)
+            for index_dt, dt in enumerate(dts):
+                dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
+                dt_poly = polygon_from_str(dt_coors)
+                iou = polygon_iou(dt_poly, gt_poly)
+                if iou >= iou_thresh:
+                    all_ious[(index_gt, index_dt)] = iou
+        sorted_ious = sorted(
+            all_ious.items(), key=operator.itemgetter(1), reverse=True)
+        sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+    
+        for gt_dt_pair in sorted_gt_dt_pairs:
+            index_gt, index_dt = gt_dt_pair
+            if gt_match[index_gt] == False and dt_match[index_dt] == False:
+                gt_match[index_gt] = True
+                dt_match[index_dt] = True
+                if ignore_blank:
+                    gt_str = strQ2B(gts[index_gt][8]).replace(" ", "")
+                    dt_str = strQ2B(dts[index_dt][8]).replace(" ", "")
+                else:
+                    gt_str = strQ2B(gts[index_gt][8])
+                    dt_str = strQ2B(dts[index_dt][8])
+                if ignore_masks[index_gt] == '0':
+                    ed_sum += ed(gt_str, dt_str)
+                    num_gt_chars += len(gt_str)
+                    if gt_str == dt_str:
+                        hit += 1
+                    gt_count += 1
+                    dt_count += 1
+    
+        for tindex, dt_match_flag in enumerate(dt_match):
+            if dt_match_flag == False:
+                dt_str = dts[tindex][8]
+                gt_str = ''
+                ed_sum += ed(dt_str, gt_str)
+                dt_count += 1
+    
+        for tindex, gt_match_flag in enumerate(gt_match):
+            if gt_match_flag == False and ignore_masks[tindex] == '0':
+                dt_str = ''
+                gt_str = gts[tindex][8]
+                ed_sum += ed(gt_str, dt_str)
+                num_gt_chars += len(gt_str)
+                gt_count += 1
+    
+        eps = 1e-9
+        precision = hit / (dt_count + eps)
+        recall = hit / (gt_count + eps)
+        fmeasure = 2.0 * precision * recall / (precision + recall + eps)
+        avg_edit_dist_img = ed_sum / len(val_names)
+        avg_edit_dist_field = ed_sum / (gt_count + eps)
+        character_acc = 1 - ed_sum / (num_gt_chars + eps)
+    
+        return precision, recall, fmeasure, avg_edit_dist_img, avg_edit_dist_field, character_acc
     gt_folder = sys.argv[1]
     pred_folder = sys.argv[2]
     e2e_eval(gt_folder, pred_folder)
