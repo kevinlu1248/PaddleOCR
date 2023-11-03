@@ -98,6 +98,31 @@ def e2e_eval(gt_dir, res_dir, ignore_blank=False):
 
         val_path = os.path.join(res_dir, val_name)
         if not os.path.exists(val_path):
+# Test for e2e_eval function
+def test_e2e_eval():
+    # Mock data
+    gt_dir = "mock_gt_dir"
+    res_dir = "mock_res_dir"
+    ignore_blank = False
+
+    # Mock return values
+    mock_read_files_return = ([], [], [])
+    mock_calculate_metrics_return = (0, 0, 0, 0, 0)
+
+    # Mock read_files function
+    read_files = MagicMock(return_value=mock_read_files_return)
+
+    # Mock calculate_metrics function
+    calculate_metrics = MagicMock(return_value=mock_calculate_metrics_return)
+
+    # Call e2e_eval function
+    e2e_eval(gt_dir, res_dir, ignore_blank)
+
+    # Assert read_files was called with correct arguments
+    read_files.assert_called_once_with(os.listdir(gt_dir), gt_dir, res_dir)
+
+    # Assert calculate_metrics was called correct number of times
+    assert calculate_metrics.call_count == len(os.listdir(gt_dir))
             dt_lines = []
         else:
             with open(val_path, encoding='utf-8') as f:
@@ -130,11 +155,66 @@ def print_results(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars):
     character_acc = 1 - ed_sum / (num_gt_chars + eps)
 
     print('character_acc: %.2f' % (character_acc * 100) + "%")
-    print('avg_edit_dist_field: %.2f' % (avg_edit_dist_field))
-    print('avg_edit_dist_img: %.2f' % (avg_edit_dist_img))
-    print('precision: %.2f' % (precision * 100) + "%")
-    print('recall: %.2f' % (recall * 100) + "%")
     print('fmeasure: %.2f' % (fmeasure * 100) + "%")
+
+def calculate_metrics(gts, dts, iou_thresh, all_ious, gt_match, dt_match, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count):
+    for index_gt, gt in enumerate(gts):
+        gt_coors = [float(gt_coor) for gt_coor in gt[0:8]]
+        gt_poly = polygon_from_str(gt_coors)
+        for index_dt, dt in enumerate(dts):
+            dt_coors = [float(dt_coor) for dt_coor in dt[0:8]]
+            dt_poly = polygon_from_str(dt_coors)
+            iou = polygon_iou(dt_poly, gt_poly)
+            if iou >= iou_thresh:
+                all_ious[(index_gt, index_dt)] = iou
+    sorted_ious = sorted(
+        all_ious.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_gt_dt_pairs = [item[0] for item in sorted_ious]
+
+    # matched gt and dt
+    for gt_dt_pair in sorted_gt_dt_pairs:
+# Test for calculate_metrics function
+def test_calculate_metrics():
+    # Mock data
+    gts = [["mock_gt"]]
+    dts = [["mock_dt"]]
+    iou_thresh = 0.5
+    all_ious = defaultdict(tuple)
+    gt_match = [False]
+    dt_match = [False]
+    ignore_blank = False
+    ignore_masks = ['0']
+    ed_sum = 0
+    num_gt_chars = 0
+    hit = 0
+    gt_count = 0
+    dt_count = 0
+
+    # Call calculate_metrics function with mock data
+    result = calculate_metrics(gts, dts, iou_thresh, all_ious, gt_match, dt_match, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count)
+
+    # Assert return value is correct
+    assert result == (0, 0, 0, 0, 0)
+def test_print_results():
+    # Mock data
+    hit = 0
+    dt_count = 0
+    gt_count = 0
+    ed_sum = 0
+    val_names = ["mock_val_name"]
+    num_gt_chars = 0
+
+    # Call print_results function with mock data
+    print_results(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+
+    # Assert correct results are printed
+    # This is a bit tricky as the function prints to stdout, 
+    # so we need to capture stdout and then assert on its value
+    captured = io.StringIO()
+    sys.stdout = captured
+    print_results(hit, dt_count, gt_count, ed_sum, val_names, num_gt_chars)
+    sys.stdout = sys.__stdout__
+    assert captured.getvalue() == "hit, dt_count, gt_count 0 0 0\ncharacter_acc: 100.00%\navg_edit_dist_field: 0.00\navg_edit_dist_img: 0.00\nprecision: 0.00%\nrecall: 0.00%\nfmeasure: 0.00%\n"
 
 def calculate_metrics(gts, dts, iou_thresh, all_ious, gt_match, dt_match, ignore_blank, ignore_masks, ed_sum, num_gt_chars, hit, gt_count, dt_count):
     for index_gt, gt in enumerate(gts):
@@ -209,6 +289,18 @@ def read_files(val_names, gt_dir, res_dir):
 
         val_path = os.path.join(res_dir, val_name)
         if not os.path.exists(val_path):
+# Test for read_files function
+def test_read_files():
+    # Mock data
+    val_names = ["mock_val_name"]
+    gt_dir = "mock_gt_dir"
+    res_dir = "mock_res_dir"
+
+    # Call read_files function with mock data
+    result = read_files(val_names, gt_dir, res_dir)
+
+    # Assert return value is correct
+    assert result == ([], [], [])
             dt_lines = []
         else:
             with open(val_path, encoding='utf-8') as f:
