@@ -350,6 +350,3 @@ def test_calculate_final_metrics():
     assert dts == [["1", "2", "3", "4", "5", "6", "7", "8", ""], ["9", "10", "11", "12", "13", "14", "15", "16", "test"]]
     assert gts == [["1", "2", "3", "4", "5", "6", "7", "8", ""], ["9", "10", "11", "12", "13", "14", "15", "16", "test"]]
     assert ignore_masks == ["0", "1"]
-    gt_folder = sys.argv[1]
-    pred_folder = sys.argv[2]
-    e2e_eval(gt_folder, pred_folder)
